@@ -289,7 +289,7 @@ export default function Home() {
             <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
               <img className="w-4 h-4" src={contato} alt="icone contato" />
             </div>
-            <span className="text-gray-700">Fale conosco (useNavigate)</span>
+            <span className="text-gray-700">Fale conosco </span>
           </button>
           
           <Link to="/dev" className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded transition-colors">
