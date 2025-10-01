@@ -4,13 +4,15 @@ import ilustracao from '../assets/images/imagem ilustrativa.jpg'
 export default function SobreVisuAll() {
   return (
     <div className="p-4 space-y-6">
-      {/* Botão voltar */}
-      <BackButton />
+      
 
       {/* Cabeçalho */}
       <div className="text-center">
         <h1 className="text-3xl font-bold text-black mb-4">Sobre o VisuAll</h1>
       </div>
+
+      {/* Botão voltar */}
+      <BackButton />
 
       {/* Conteúdo principal */}
       <div className="bg-white rounded-lg shadow-sm p-6 space-y-6">
