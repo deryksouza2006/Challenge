@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -50,6 +50,9 @@ const lembreteSchema = z.object({
 type LembreteData = z.infer<typeof lembreteSchema>;
 
 export default function Home() {
+  useEffect(() => {
+    console.log("Componente Home montado!");
+  }, []);
   const [showAddReminder, setShowAddReminder] = useState(false);
   const [lembreteAtual, setLembreteAtual] = useState<LembreteData | null>({
     nomeMedico: 'Dr. João Silva',
@@ -60,6 +63,7 @@ export default function Home() {
     observacoes: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
 
   const {
     register,
@@ -279,12 +283,14 @@ export default function Home() {
             <span className="text-gray-700">FAQ</span>
           </Link>
           
-          <Link to="/contato" className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded transition-colors">
+          <button 
+            onClick={() => navigate("/contato")}
+            className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded transition-colors w-full text-left">
             <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
               <img className="w-4 h-4" src={contato} alt="icone contato" />
             </div>
-            <span className="text-gray-700">Fale conosco</span>
-          </Link>
+            <span className="text-gray-700">Fale conosco (useNavigate)</span>
+          </button>
           
           <Link to="/dev" className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded transition-colors">
             <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">

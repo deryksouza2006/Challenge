@@ -9,6 +9,7 @@ import Tutorial from "./pages/Tutorial";
 import Instrucoes from "./pages/Instrucoes";
 import OuvidoriaHC from "./pages/OuvidoriaHC";
 import SobreVisuAll from "./pages/SobreVisuall";
+import DeveloperDetail from "./pages/DeveloperDetail";
 
 function App() {
   return (
@@ -24,7 +25,8 @@ function App() {
             <Route path="/tutorial" element={<Tutorial />} />
             <Route path="/instrucoes" element={<Instrucoes />} />
             <Route path="/ouvidoria-hc" element={<OuvidoriaHC />} />
-            <Route path="/sobreVisuall" element={<SobreVisuAll/>} />
+            <Route path="/sobreVisuAll" element={<SobreVisuAll/>} />
+            <Route path="/dev/:id" element={<DeveloperDetail />} />
           </Routes>
         </main>
         <Footer />

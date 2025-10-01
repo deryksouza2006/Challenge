@@ -86,7 +86,7 @@ export default function Dev() {
       {/* Cards dos desenvolvedores */}
       <div className="space-y-4">
         {developers.map((dev) => (
-          <div key={dev.id} className="bg-white rounded-lg shadow-sm p-4">
+          <Link to={`/dev/${dev.id}`} key={dev.id} className="block bg-white rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow duration-200">
             <div className="flex items-start space-x-4">
               <div className="w-16 h-16 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
                 <img 
@@ -146,7 +146,7 @@ export default function Dev() {
                 </div>
               </div>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
 
