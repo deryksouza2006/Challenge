@@ -98,7 +98,7 @@ export default function SobreVisuAll() {
         <div className="text-center pt-6">
           <div className="bg-[#23C8AA] text-white p-6 rounded-lg">
             <h3 className="text-xl font-semibold mb-2">Junte-se a nós nessa missão!</h3>
-            <p className="text-blue-100">
+            <p className="text-white-100">
               Ajudando a tornar a saúde mais acessível e inclusiva para todos os idosos.
             </p>
           </div>
