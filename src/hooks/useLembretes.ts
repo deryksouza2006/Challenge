@@ -1,6 +1,6 @@
 // hooks/useLembretes.ts - VERSÃO CORRIGIDA
 import { useState, useEffect } from 'react';
-import { lembreteService, type LembreteRequestDTO, type LembreteResponseDTO } from '../services/lembreteService';
+import { lembreteService, type LembreteRequestDTO, type LembreteResponseDTO } from '../service/lembreteService';
 import { useAuth } from '../context/AuthContext';
 
 export const useLembretes = () => {
