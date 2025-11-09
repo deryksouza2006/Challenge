@@ -4,11 +4,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import BackButton from '../../components/BackButton';
-import check from "../assets/images/check.png";
-import mail from "../assets/images/mail2.png";
-import telefone from "../assets/images/telefone2.png";
-import relogio from "../assets/images/relogio2.png";
-import chatbot from "../assets/images/chatbot.png";
+import check from "../../assets/images/check.png";
+import mail from "../../assets/images/mail2.png";
+import telefone from "../../assets/images/telefone2.png";
+import relogio from "../../assets/images/relogio2.png";
+import chatbot from "../../assets/images/chatbot.png";
 
 // Schema de validação com Zod
 const contatoSchema = z.object({
