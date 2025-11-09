@@ -88,6 +88,7 @@ visuall-git
 - **Repositório GitHub:** [https://github.com/deryksouza2006/Challenge.git](https://github.com/deryksouza2006/Challenge.git)
 - **Vídeo de Apresentação (YouTube):** [https://youtu.be/Y1Jl9EWHx7w?si=x-C1edQ73qPojumv](https://youtu.be/Y1Jl9EWHx7w?si=x-C1edQ73qPojumv)
 
+**Repositório Vercel:** [https://challenge-git-master-deryksouza2006s-projects.vercel.app/](https://challenge-git-master-deryksouza2006s-projects.vercel.app/)
 ## Análise de APIs, Hooks, Props e Rotas (Pós-Sprint 4)
 
 ### APIs
