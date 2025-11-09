@@ -41,7 +41,7 @@ export const ListaLembretes: React.FC = () => {
             {lembretesAtivos.map(lembrete => (
               <div key={lembrete.id} className="border border-gray-200 rounded-lg p-4 shadow-sm">
                 <h3 className="font-semibold text-lg">{lembrete.titulo || `Consulta com ${lembrete.nomeMedico}`}</h3>
-                <p className="text-gray-600">Tipo: {lembrete.tipoLembrete || 'CONSULTA'}</p>
+                <p className="text-gray-600">Tipo: {lembrete.concluido || 'CONSULTA'}</p>
                 <p className="text-gray-600">
                   Data: {formatarData(lembrete.dataConsulta)} às {obterHora(lembrete.horaConsulta)}
                 </p>
@@ -79,7 +79,7 @@ export const ListaLembretes: React.FC = () => {
         ) : (
           <div className="space-y-3">
             {lembretes.map(lembrete => (
-              <div key={lembrete.id} className={`border rounded-lg p-3 ${lembrete.ativo ? 'bg-white' : 'bg-gray-50'}`}>
+              <div key={lembrete.id} className={`border rounded-lg p-3 ${lembrete.concluido ? 'bg-white' : 'bg-gray-50'}`}>
                 <div className="flex justify-between items-start">
                   <div>
                     <h4 className="font-medium">{lembrete.titulo || `Consulta com ${lembrete.nomeMedico}`}</h4>
@@ -87,8 +87,8 @@ export const ListaLembretes: React.FC = () => {
                       {formatarData(lembrete.dataConsulta)} às {obterHora(lembrete.horaConsulta)}
                     </p>
                   </div>
-                  <span className={`px-2 py-1 rounded text-xs ${lembrete.ativo ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                    {lembrete.ativo ? 'Ativo' : 'Concluído'}
+                  <span className={`px-2 py-1 rounded text-xs ${lembrete.concluido ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                    {lembrete.concluido ? 'Ativo' : 'Concluído'}
                   </span>
                 </div>
               </div>
