@@ -3,22 +3,32 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useAuth } from '../context/AuthContext';
+import ReminderCard from '../components/ReminderCard';
+import HistoryCard from '../components/HistoryCard';
 import telefone24 from "../assets/images/telefone24.png";
 import instrucao from "../assets/images/instrucao.png";
 import tutorial from "../assets/images/tutorial.png";
-import doutor from "../assets/images/perfil.png";
-import lixeira from "../assets/images/lixeira.png";
-import calendario from "../assets/images/calendario.png";
-import localizacao from "../assets/images/localizacao.png";
-import relogio from "../assets/images/relogio.png";
-import audio from "../assets/images/audio.png";
-import compartilhar from "../assets/images/compartilhar.png";
 import informacao from "../assets/images/informacao.png";
 import contato from "../assets/images/fale.png";
 import faq from "../assets/images/interrogacao.png";
 import dev from "../assets/images/dev.png";
 
-// validação com Zod
+// Interface para Lembrete
+interface Lembrete {
+  id: number;
+  titulo: string;
+  nomeMedico: string;
+  especialidade: string;
+  data: string;
+  hora: string;
+  local: string;
+  observacoes: string;
+  concluido: boolean;
+  concluidoEm?: number;
+}
+
+// Validação com Zod
 const lembreteSchema = z.object({
   nomeMedico: z.string()
     .min(1, 'Nome do médico é obrigatório')
@@ -50,18 +60,10 @@ const lembreteSchema = z.object({
 type LembreteData = z.infer<typeof lembreteSchema>;
 
 export default function Home() {
-  useEffect(() => {
-    console.log("Componente Home montado!");
-  }, []);
+  const { user, isAuthenticated } = useAuth();
+  const [lembretes, setLembretes] = useState<Lembrete[]>([]);
   const [showAddReminder, setShowAddReminder] = useState(false);
-  const [lembreteAtual, setLembreteAtual] = useState<LembreteData | null>({
-    nomeMedico: 'Dr. João Silva',
-    especialidade: 'Cardiologista',
-    data: '2025-09-12',
-    hora: '15:00',
-    local: 'Hospital das Clínicas - Bloco B Sala 305',
-    observacoes: ''
-  });
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
@@ -69,82 +71,203 @@ export default function Home() {
     register,
     handleSubmit,
     formState: { errors },
-    reset
+    reset,
+    setValue,
   } = useForm<LembreteData>({
     resolver: zodResolver(lembreteSchema)
   });
 
+  // Carregar lembretes do localStorage baseado no usuário logado
+  useEffect(() => {
+    if (user) {
+      const userLembretes = localStorage.getItem(`lembretes_${user.id}`);
+      if (userLembretes) {
+        setLembretes(JSON.parse(userLembretes));
+      } else {
+        // Lembretes mock iniciais apenas para demonstração
+        const initialLembretes: Lembrete[] = [
+          {
+            id: 1,
+            titulo: 'Consulta com Dr. João Silva',
+            nomeMedico: 'Dr. João Silva',
+            especialidade: 'Cardiologista',
+            data: '2025-12-15',
+            hora: '15:00',
+            local: 'Hospital das Clínicas - Bloco B Sala 305',
+            observacoes: 'Levar exames anteriores',
+            concluido: false,
+          },
+        ];
+        setLembretes(initialLembretes);
+        localStorage.setItem(`lembretes_${user.id}`, JSON.stringify(initialLembretes));
+      }
+    } else {
+      setLembretes([]);
+    }
+  }, [user]);
+
+  // Salvar lembretes no localStorage quando mudarem
+  useEffect(() => {
+    if (user && lembretes.length > 0) {
+      localStorage.setItem(`lembretes_${user.id}`, JSON.stringify(lembretes));
+    }
+  }, [lembretes, user]);
+
+  // Efeito para remover lembretes do histórico após 5 minutos
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLembretes(prevLembretes =>
+        prevLembretes.filter(lembrete => {
+          if (lembrete.concluido && lembrete.concluidoEm) {
+            const tempoDecorrido = Date.now() - lembrete.concluidoEm;
+            return tempoDecorrido < 300000;
+          }
+          return true;
+        })
+      );
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   const onSubmit = async (data: LembreteData) => {
+    if (!user) {
+      alert('Você precisa estar logado para criar lembretes');
+      navigate('/login');
+      return;
+    }
+
     setIsSubmitting(true);
-    
-    // Simular salvamento
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Atualizar o lembrete atual com os dados do formulário
-    setLembreteAtual(data);
-    
-    // Resetar formulário
+
+    setLembretes(prevLembretes => {
+      if (editingId !== null) {
+        return prevLembretes.map(l =>
+          l.id === editingId
+            ? { 
+                ...l, 
+                nomeMedico: data.nomeMedico, 
+                especialidade: data.especialidade, 
+                data: data.data, 
+                hora: data.hora, 
+                local: data.local, 
+                observacoes: data.observacoes || '',
+                titulo: `Consulta com ${data.nomeMedico}`
+              }
+            : l
+        );
+      } else {
+        const novoLembrete: Lembrete = {
+          id: Math.max(...prevLembretes.map(l => l.id), 0) + 1,
+          titulo: `Consulta com ${data.nomeMedico}`,
+          nomeMedico: data.nomeMedico,
+          especialidade: data.especialidade,
+          data: data.data,
+          hora: data.hora,
+          local: data.local,
+          observacoes: data.observacoes || '',
+          concluido: false,
+        };
+        return [...prevLembretes, novoLembrete];
+      }
+    });
+
     reset();
-    
     setIsSubmitting(false);
+    setShowAddReminder(false);
+    setEditingId(null);
+  };
+
+  const handleEditLembrete = (lembrete: Lembrete) => {
+    setValue('nomeMedico', lembrete.nomeMedico);
+    setValue('especialidade', lembrete.especialidade);
+    setValue('data', lembrete.data);
+    setValue('hora', lembrete.hora);
+    setValue('local', lembrete.local);
+    setValue('observacoes', lembrete.observacoes);
+    setEditingId(lembrete.id);
+    setShowAddReminder(true);
+  };
+
+  const handleDeleteLembrete = (id: number) => {
+    if (window.confirm('Tem certeza que deseja excluir este lembrete?')) {
+      setLembretes(prevLembretes => prevLembretes.filter(l => l.id !== id));
+    }
+  };
+
+  const handleToggleConcluido = (id: number) => {
+    setLembretes(prevLembretes => 
+      prevLembretes.map(l =>
+        l.id === id 
+          ? { 
+              ...l, 
+              concluido: !l.concluido, 
+              concluidoEm: !l.concluido ? Date.now() : undefined 
+            } 
+          : l
+      )
+    );
+  };
+
+  const handleListenReminder = (lembrete: Lembrete) => {
+    const formatDate = (dateString: string): string => {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('pt-BR');
+    };
+
+    const message = `Lembrete de consulta com ${lembrete.nomeMedico}, ${lembrete.especialidade}, no dia ${formatDate(lembrete.data)}, às ${lembrete.hora}, no local ${lembrete.local}. ${lembrete.observacoes ? `Observações: ${lembrete.observacoes}` : ''}`;
+    const speech = new SpeechSynthesisUtterance(message);
+    speechSynthesis.speak(speech);
+  };
+
+  const handleShareReminder = async (lembrete: Lembrete) => {
+    const formatDate = (dateString: string): string => {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('pt-BR');
+    };
+
+    const shareText = `Lembrete de consulta com ${lembrete.nomeMedico}, ${lembrete.especialidade}, no dia ${formatDate(lembrete.data)}, às ${lembrete.hora}, no local ${lembrete.local}. ${lembrete.observacoes ? `Observações: ${lembrete.observacoes}` : ''}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Lembrete VisuAll',
+          text: shareText,
+        });
+        alert('Lembrete compartilhado com sucesso!');
+      } catch (error) {
+        console.error('Erro ao compartilhar:', error);
+      }
+    } else {
+      navigator.clipboard.writeText(shareText)
+        .then(() => {
+          alert('Lembrete copiado para a área de transferência!');
+        })
+        .catch(err => {
+          console.error('Erro ao copiar:', err);
+          alert('Não foi possível copiar o lembrete.');
+        });
+    }
+  };
+
+  const handleCloseForm = () => {
+    reset();
+    setEditingId(null);
     setShowAddReminder(false);
   };
 
-  const handleListenReminder = () => {
-    if (lembreteAtual) {
-      const message = `Lembrete de consulta com ${lembreteAtual.nomeMedico}, ${lembreteAtual.especialidade}, no dia ${formatDate(lembreteAtual.data)}, às ${formatTime(lembreteAtual.hora)}, no local ${lembreteAtual.local}. ${lembreteAtual.observacoes ? `Observações: ${lembreteAtual.observacoes}` : ''}`;
-      const speech = new SpeechSynthesisUtterance(message);
-      speechSynthesis.speak(speech);
-    } else {
-      alert("Nenhum lembrete para ouvir.");
+  const handleAddReminderClick = () => {
+    if (!isAuthenticated) {
+      alert('Você precisa fazer login para criar lembretes');
+      navigate('/login');
+      return;
     }
+    setShowAddReminder(true);
   };
 
-  const handleShareReminder = async () => {
-    if (lembreteAtual) {
-      const shareText = `Lembrete de consulta com ${lembreteAtual.nomeMedico}, ${lembreteAtual.especialidade}, no dia ${formatDate(lembreteAtual.data)}, às ${formatTime(lembreteAtual.hora)}, no local ${lembreteAtual.local}. ${lembreteAtual.observacoes ? `Observações: ${lembreteAtual.observacoes}` : ''}`;
-
-      if (navigator.share) {
-        try {
-          await navigator.share({
-            title: 'Lembrete VisuAll',
-            text: shareText,
-          });
-          alert('Lembrete compartilhado com sucesso!');
-        } catch (error) {
-          console.error('Erro ao compartilhar:', error);
-          alert('Não foi possível compartilhar o lembrete.');
-        }
-      } else {
-        // Fallback para copiar para a área de transferência
-        navigator.clipboard.writeText(shareText)
-          .then(() => {
-            alert('Lembrete copiado para a área de transferência!');
-          })
-          .catch(err => {
-            console.error('Erro ao copiar:', err);
-            alert('Não foi possível copiar o lembrete.');
-          });
-      }
-    } else {
-      alert("Nenhum lembrete para compartilhar.");
-    }
-  };
-
-  const handleDeleteReminder = () => {
-    if (window.confirm('Tem certeza que deseja excluir este lembrete?')) {
-      setLembreteAtual(null);
-    }
-  };
-
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR');
-  };
-
-  const formatTime = (timeString: string): string => {
-    return timeString;
-  };
+  // Separar lembretes ativos e histórico
+  const lembretesAtivos = lembretes.filter(l => !l.concluido);
+  const lembretesHistorico = lembretes.filter(l => l.concluido);
 
   return (
     <div className="p-4 space-y-6">
@@ -175,99 +298,75 @@ export default function Home() {
         </Link>
       </div>
 
-      {/* Lembrete atual */}
-      <div className="bg-white rounded-lg shadow-sm">
-        <div className="flex items-center justify-between p-4">
-          <h2 className="text-lg font-semibold text-gray-800">Lembrete atual</h2>
-          <button 
-            onClick={() => setShowAddReminder(true)}
+      {/* Seção de Lembretes Ativos */}
+      <div>
+        {/* Cabeçalho com Título e Botão */}
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-2xl font-bold text-gray-800">Meus Lembretes</h2>
+          <button
+            onClick={handleAddReminderClick}
             className="bg-[#23C8AA] text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center space-x-2 hover:bg-teal-700 transition-colors"
           >
             <span>+</span>
-            <span>Adicionar Lembrete</span>
+            <span>Novo Lembrete</span>
           </button>
         </div>
-        
-        {lembreteAtual ? (
-          <div className="p-4">
-            <div className="flex items-start space-x-4">
-              <div className="w-12 h-12 flex items-center justify-center text-white">
-                <img src={doutor} alt="icone pessoa" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-gray-800">{lembreteAtual.nomeMedico}</h3>
-                <p className="text-sm text-gray-600">{lembreteAtual.especialidade}</p>
-              </div>
-              <button 
-                onClick={handleDeleteReminder}
-                className="text-red-500 p-1 w-10 h-10 hover:bg-red-50 rounded-lg transition-colors"
-                title="Excluir lembrete"
-              >
-                <span></span>
-                <img src={lixeira} alt="icone lixeira" />
-              </button>
-            </div>
-            
-            <div className="mt-4 space-y-2">
-              <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <img className="w-4 h-4" src={calendario} alt="icone calendario" />
-                <span>{formatDate(lembreteAtual.data)}</span>
-              </div>
-              
-              <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <img className="w-4 h-4" src={localizacao} alt="icone localização" />
-                <span>{lembreteAtual.local}</span>
-              </div>
-              
-              <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <img className="w-4 h-4" src={relogio} alt="icone relógio" />
-                <span>{formatTime(lembreteAtual.hora)}</span>
-              </div>
 
-              {lembreteAtual.observacoes && (
-                <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-700">
-                    <strong>Observações:</strong> {lembreteAtual.observacoes}
-                  </p>
-                </div>
-              )}
+        {/* Lista de Lembretes Ativos */}
+        <div className="space-y-3">
+          {!isAuthenticated ? (
+            <div className="bg-white rounded-lg p-8 text-center">
+              <p className="text-gray-500 text-lg mb-4">Faça login para acessar seus lembretes</p>
             </div>
-            
-            <div className="mt-4 flex space-x-2">
-              <button 
-                onClick={handleListenReminder}
-                className="bg-[#23C8AA] text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center space-x-2 hover:bg-teal-700 transition-colors"
-              >
-                <img className="w-4 h-4" src={audio} alt="icone audio" />
-                <span>Ouvir Lembrete</span>
-              </button>
-              
-              <button 
-                onClick={handleShareReminder}
-                className="border border-[#23C8AA] text-[#23C8AA] px-4 py-2 rounded-lg text-sm font-medium flex items-center space-x-2 hover:bg-teal-50 transition-colors"
-              >
-                <img className="w-4 h-4" src={compartilhar} alt="icone compartilhar" />
-                <span>Compartilhar</span>
-              </button>
+          ) : lembretesAtivos.length === 0 ? (
+            <div className="bg-white rounded-lg p-8 text-center">
+              <p className="text-gray-500 text-lg mb-2">Você não tem lembretes cadastrados</p>
+              <p className="text-sm text-gray-400">Clique em "Novo Lembrete" para criar seu primeiro lembrete de consulta.</p>
             </div>
-          </div>
-        ) : (
-          <div className="p-8 text-center text-gray-500">
-            <div className="w-16 h-16 mx-auto mb-4 opacity-50">
-              <img src={doutor} alt="icone pessoa" />
-            </div>
-            <p className="text-lg font-medium mb-2">Nenhum lembrete cadastrado</p>
-            <p className="text-sm">Clique em "Adicionar Lembrete" para criar seu primeiro lembrete de consulta.</p>
-          </div>
-        )}
+          ) : (
+            lembretesAtivos.map(lembrete => (
+              <ReminderCard
+                key={lembrete.id}
+                lembrete={{
+                  ...lembrete,
+                  nomeMedico: lembrete.nomeMedico,
+                }}
+                onEdit={handleEditLembrete}
+                onDelete={handleDeleteLembrete}
+                onToggleConcluido={handleToggleConcluido}
+                onListen={handleListenReminder}
+                onShare={handleShareReminder}
+              />
+            ))
+          )}
+        </div>
       </div>
 
-      {/* Histórico de Lembretes */}
+      {/* Seção de Histórico de Lembretes */}
+      {isAuthenticated && lembretesHistorico.length > 0 && (
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Histórico de Lembretes</h2>
+          
+          <div className="space-y-3">
+            {lembretesHistorico.map(lembrete => (
+              <HistoryCard
+                key={lembrete.id}
+                lembrete={{
+                  ...lembrete,
+                  nomeMedico: lembrete.nomeMedico,
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Histórico (Links) */}
       <div className="bg-white rounded-lg shadow-sm">
         <div className="flex items-center justify-between p-4">
-          <h2 className="text-lg font-semibold text-gray-800">Histórico de Lembretes</h2>
+          <h2 className="text-lg font-semibold text-gray-800">Histórico</h2>
         </div>
-        
+
         <div className="p-4 space-y-3">
           <Link to="/sobreVisuall" className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded transition-colors">
             <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
@@ -275,23 +374,23 @@ export default function Home() {
             </div>
             <span className="text-gray-700">Sobre o VisuAll</span>
           </Link>
-          
+
           <Link to="/faq" className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded transition-colors">
             <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
               <img className="w-5 h-5" src={faq} alt="icone faq" />
             </div>
             <span className="text-gray-700">FAQ</span>
           </Link>
-          
-          <button 
+
+          <button
             onClick={() => navigate("/contato")}
             className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded transition-colors w-full text-left">
             <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
               <img className="w-4 h-4" src={contato} alt="icone contato" />
             </div>
-            <span className="text-gray-700">Fale conosco </span>
+            <span className="text-gray-700">Fale conosco</span>
           </button>
-          
+
           <Link to="/dev" className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded transition-colors">
             <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
               <img className="w-4 h-4" src={dev} alt="icone dev" />
@@ -301,21 +400,29 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Adicionar Lembrete */}
+      {/* Modal: Adicionar/Editar Lembrete */}
       {showAddReminder && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0  backdrop-blur-lg flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="p-4 border-b">
-              <h3 className="text-lg font-semibold">Adicionando lembrete</h3>
+            <div className="p-4 border-b flex justify-between items-center">
+              <h3 className="text-lg font-semibold">
+                {editingId ? 'Editar Lembrete' : 'Novo Lembrete'}
+              </h3>
+              <button
+                onClick={handleCloseForm}
+                className="text-gray-400 hover:text-gray-600 text-2xl"
+              >
+                ✕
+              </button>
             </div>
-            
+
             <form onSubmit={handleSubmit(onSubmit)} className="p-4 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Nome do Médico *
                 </label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   {...register('nomeMedico')}
                   placeholder="Digite o Nome do Médico"
                   className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${
@@ -326,12 +433,12 @@ export default function Home() {
                   <p className="text-red-500 text-sm mt-1">{errors.nomeMedico.message}</p>
                 )}
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Especialidade *
                 </label>
-                <select 
+                <select
                   {...register('especialidade')}
                   className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${
                     errors.especialidade ? 'border-red-500' : 'border-gray-300'
@@ -353,13 +460,13 @@ export default function Home() {
                   <p className="text-red-500 text-sm mt-1">{errors.especialidade.message}</p>
                 )}
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Data *
                 </label>
-                <input 
-                  type="date" 
+                <input
+                  type="date"
                   {...register('data')}
                   className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${
                     errors.data ? 'border-red-500' : 'border-gray-300'
@@ -369,13 +476,13 @@ export default function Home() {
                   <p className="text-red-500 text-sm mt-1">{errors.data.message}</p>
                 )}
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Hora *
                 </label>
-                <input 
-                  type="time" 
+                <input
+                  type="time"
                   {...register('hora')}
                   className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${
                     errors.hora ? 'border-red-500' : 'border-gray-300'
@@ -385,13 +492,13 @@ export default function Home() {
                   <p className="text-red-500 text-sm mt-1">{errors.hora.message}</p>
                 )}
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Local *
                 </label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   {...register('local')}
                   placeholder="Ex: Hospital das Clínicas - Bloco A Sala 205"
                   className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${
@@ -402,12 +509,12 @@ export default function Home() {
                   <p className="text-red-500 text-sm mt-1">{errors.local.message}</p>
                 )}
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Observações
                 </label>
-                <textarea 
+                <textarea
                   {...register('observacoes')}
                   rows={3}
                   placeholder="Informações adicionais sobre a consulta (opcional)"
@@ -421,12 +528,12 @@ export default function Home() {
               </div>
 
               <div className="border-t pt-4 flex space-x-3">
-                <button 
+                <button
                   type="submit"
                   disabled={isSubmitting}
                   className={`flex-1 py-3 rounded-lg font-medium transition-colors ${
-                    isSubmitting 
-                      ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
+                    isSubmitting
+                      ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
                       : 'bg-[#23C8AA] text-white hover:bg-teal-700'
                   }`}
                 >
@@ -439,12 +546,12 @@ export default function Home() {
                       <span>Salvando...</span>
                     </span>
                   ) : (
-                    'Salvar'
+                    editingId ? 'Salvar Alterações' : 'Salvar'
                   )}
                 </button>
-                <button 
+                <button
                   type="button"
-                  onClick={() => setShowAddReminder(false)}
+                  onClick={handleCloseForm}
                   disabled={isSubmitting}
                   className="flex-1 border border-[#23C8AA] text-[#23C8AA] py-3 rounded-lg font-medium hover:bg-teal-50 transition-colors disabled:opacity-50"
                 >
